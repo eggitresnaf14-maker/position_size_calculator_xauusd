@@ -62,6 +62,7 @@
   }
   .dir-btn.buy.active { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
   .dir-btn.sell.active { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+  .hint { font-size: 11px; color: var(--text3); margin-top: 6px; }
   .level-row { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--border); flex-wrap: wrap; }
   .level-item { display: flex; gap: 4px; font-size: 12px; }
   .level-label { color: var(--text3); }
@@ -123,30 +124,19 @@
           <input type="number" id="entry" value="4855.00" step="0.01" oninput="calc()">
         </div>
         <div class="field">
-          <label>SL (pips)</label>
-          <input type="number" id="sl-pips" value="30" min="0.1" step="0.1" oninput="calc()">
+          <label>SL (points)</label>
+          <input type="number" id="sl-pts" value="300" min="1" step="1" oninput="calc()">
         </div>
         <div class="field">
-          <label>TP (pips)</label>
-          <input type="number" id="tp-pips" value="70" min="0.1" step="0.1" oninput="calc()">
+          <label>TP (points)</label>
+          <input type="number" id="tp-pts" value="700" min="1" step="1" oninput="calc()">
         </div>
       </div>
+      <div class="hint">1 point = $0.01 · 100 points = $1.00</div>
       <div class="level-row">
         <div class="level-item"><span class="level-label">SL price:</span><span class="level-val" id="sl-price">—</span></div>
         <div class="level-item"><span class="level-label">TP price:</span><span class="level-val" id="tp-price">—</span></div>
         <div class="level-item"><span class="level-label">R/R:</span><span class="level-val" id="rr">—</span></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Pip value</div>
-      <div class="field">
-        <label>Pip value / 0.01 lot</label>
-        <select id="pipval" onchange="calc()">
-          <option value="0.1" selected>$0.10 — standard (100oz)</option>
-          <option value="0.01">$0.01 — micro (10oz)</option>
-          <option value="1">$1.00 — 1000oz</option>
-        </select>
       </div>
     </div>
 
@@ -188,12 +178,12 @@
 
   <div id="tab-cheat" class="panel">
     <div class="card">
-      <div class="card-label">Cheat sheet — pip value $<span id="cs-pv">0.10</span></div>
+      <div class="card-label">Cheat sheet — 1 point = $0.01</div>
       <div class="cheat-wrap">
         <table>
           <thead>
             <tr>
-              <th>SL pips</th>
+              <th>SL (pts)</th>
               <th>$25k lot</th>
               <th>$5k lot</th>
               <th>Total risk</th>
@@ -221,51 +211,45 @@ function switchTab(t, el) {
   document.getElementById('tab-' + t).classList.add('active');
   if (t === 'cheat') buildCheat();
 }
-function lotFor(risk, slPips, pipval) {
-  if (slPips <= 0) return 0;
-  return Math.floor((risk / (slPips * (pipval / 0.01))) * 100) / 100;
+function lotFor(risk, pts) {
+  if (pts <= 0) return 0;
+  return Math.floor((risk / (pts * 0.01 * 100)) * 100) / 100;
 }
 function calc() {
   const entry = parseFloat(document.getElementById('entry').value) || 0;
-  const slPips = parseFloat(document.getElementById('sl-pips').value) || 0;
-  const tpPips = parseFloat(document.getElementById('tp-pips').value) || 0;
-  const pipval = parseFloat(document.getElementById('pipval').value) || 0.1;
-  const slPrice = dir === 'buy' ? entry - slPips : entry + slPips;
-  const tpPrice = dir === 'buy' ? entry + tpPips : entry - tpPips;
-  const rr = tpPips > 0 && slPips > 0 ? tpPips / slPips : 0;
-  document.getElementById('sl-price').textContent = slPips > 0 ? slPrice.toFixed(2) : '—';
-  document.getElementById('tp-price').textContent = tpPips > 0 ? tpPrice.toFixed(2) : '—';
+  const slPts = parseFloat(document.getElementById('sl-pts').value) || 0;
+  const tpPts = parseFloat(document.getElementById('tp-pts').value) || 0;
+  const slPrice = dir === 'buy' ? entry - slPts * 0.01 : entry + slPts * 0.01;
+  const tpPrice = dir === 'buy' ? entry + tpPts * 0.01 : entry - tpPts * 0.01;
+  const rr = tpPts > 0 && slPts > 0 ? tpPts / slPts : 0;
+  document.getElementById('sl-price').textContent = slPts > 0 ? slPrice.toFixed(2) : '—';
+  document.getElementById('tp-price').textContent = tpPts > 0 ? tpPrice.toFixed(2) : '—';
   document.getElementById('rr').textContent = rr > 0 ? '1:' + rr.toFixed(1) : '—';
-  const lot1 = lotFor(125, slPips, pipval);
-  const lot2 = lotFor(25, slPips, pipval);
-  const actualRisk1 = (lot1 * slPips * (pipval / 0.01)).toFixed(0);
-  const actualRisk2 = (lot2 * slPips * (pipval / 0.01)).toFixed(0);
-  const profit1 = tpPips > 0 ? (lot1 * tpPips * (pipval / 0.01)).toFixed(0) : null;
-  const profit2 = tpPips > 0 ? (lot2 * tpPips * (pipval / 0.01)).toFixed(0) : null;
+  const lot1 = lotFor(125, slPts);
+  const lot2 = lotFor(25, slPts);
+  const r1 = (lot1 * slPts * 0.01 * 100).toFixed(0);
+  const r2 = (lot2 * slPts * 0.01 * 100).toFixed(0);
+  const p1 = tpPts > 0 ? (lot1 * tpPts * 0.01 * 100).toFixed(0) : null;
+  const p2 = tpPts > 0 ? (lot2 * tpPts * 0.01 * 100).toFixed(0) : null;
   document.getElementById('lot1').textContent = lot1.toFixed(2);
   document.getElementById('lot2').textContent = lot2.toFixed(2);
-  document.getElementById('profit1').textContent = profit1 ? 'Profit: $' + profit1 : 'Profit: —';
-  document.getElementById('profit2').textContent = profit2 ? 'Profit: $' + profit2 : 'Profit: —';
-  const totalRisk = (parseFloat(actualRisk1) + parseFloat(actualRisk2)).toFixed(0);
-  const totalProfit = profit1 && profit2 ? '$' + (parseFloat(profit1) + parseFloat(profit2)).toFixed(0) : '—';
-  document.getElementById('total-risk').textContent = '$' + totalRisk;
-  document.getElementById('total-profit').textContent = totalProfit;
+  document.getElementById('profit1').textContent = p1 ? 'Profit: $' + p1 : 'Profit: —';
+  document.getElementById('profit2').textContent = p2 ? 'Profit: $' + p2 : 'Profit: —';
+  document.getElementById('total-risk').textContent = '$' + (parseFloat(r1) + parseFloat(r2)).toFixed(0);
+  document.getElementById('total-profit').textContent = p1 && p2 ? '$' + (parseFloat(p1) + parseFloat(p2)).toFixed(0) : '—';
   buildCheat();
 }
 function buildCheat() {
-  const pipval = parseFloat(document.getElementById('pipval').value) || 0.1;
-  const currentPips = parseFloat(document.getElementById('sl-pips').value) || 0;
-  document.getElementById('cs-pv').textContent = pipval.toFixed(2);
-  const rows = [5, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100];
+  const currentPts = parseFloat(document.getElementById('sl-pts').value) || 0;
+  const rows = [50, 80, 100, 120, 150, 200, 250, 300, 400, 500, 600, 800, 1000];
   const body = document.getElementById('cheat-body');
   body.innerHTML = '';
   rows.forEach(p => {
-    const l1 = lotFor(125, p, pipval);
-    const l2 = lotFor(25, p, pipval);
-    const totalR = ((l1 * p * (pipval/0.01)) + (l2 * p * (pipval/0.01))).toFixed(0);
-    const isActive = Math.abs(currentPips - p) < 0.6;
+    const l1 = lotFor(125, p);
+    const l2 = lotFor(25, p);
+    const totalR = ((l1 + l2) * p * 0.01 * 100).toFixed(0);
     const tr = document.createElement('tr');
-    if (isActive) tr.className = 'hl';
+    if (Math.abs(currentPts - p) < 5) tr.className = 'hl';
     tr.innerHTML = `<td>${p}</td><td>${l1.toFixed(2)}</td><td>${l2.toFixed(2)}</td><td>$${totalR}</td>`;
     body.appendChild(tr);
   });
